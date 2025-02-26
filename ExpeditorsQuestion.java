@@ -12,24 +12,27 @@ have to be unique by definition.  Uniqueness of people within an address was mor
 or using a Set<String> that could be used to insure uniqueness within an address.  I opted to keep both.  More data storage but less repeated processing...
  */
 public class ExpeditorsQuestion {
-    //Keeps member data as strings so that the test for uniqueness can happen easily
+    //familySets -- Keeps member data as strings so that the test for uniqueness can happen easily
     private final Dictionary<String, Set<String>> familySets;
-    //Designed to allow simple data storage for sorting and printing
-    public final Dictionary<String, ArrayList<String[]>> familyMaptoData;
-    public final Dictionary<Integer, String> GroupIDMappingFamilyAddress;
+    //familyMapToData -- Designed to allow simple data storage for sorting and printing
+    public final Dictionary<String, ArrayList<String[]>> familyMapToData;
+
+    //GroupIDMappingFamilyAddress -- preserves the unique ID's that are given to each address
+    public final Dictionary<Integer, String> groupIDMappingFamilyAddress;
     private DataInputOutFile fileProcessor;
     ExpeditorsQuestion()
     {
         familySets = new Hashtable<>();
-        GroupIDMappingFamilyAddress = new Hashtable<>();
-        familyMaptoData = new Hashtable<>();
+        groupIDMappingFamilyAddress = new Hashtable<>();
+        familyMapToData = new Hashtable<>();
+        fileProcessor = new DataInputOutFile();
     }
 
     //using dictionary.
-    public void processProfileFile(String textFileIn, String textFileOut)
+    public void processProfileInputFile(String textFileIn)
     {
-        fileProcessor = new DataInputOutFile(textFileIn, textFileOut);
-        ArrayList<String> entry = fileProcessor.readFile();
+
+        ArrayList<String> entry = fileProcessor.readFile(textFileIn);
         for (String stringLine: entry)
         {
             String[] entryCleaned = cleanEntryString(stringLine);
@@ -39,7 +42,7 @@ public class ExpeditorsQuestion {
                 String newMember = entryCleaned[1];
                 //if the family map doesn't exist we need to create it.
                 if(familySets.get(address) == null ) {
-                    GroupIDMappingFamilyAddress.put(GroupIDMappingFamilyAddress.size(), address);
+                    groupIDMappingFamilyAddress.put(groupIDMappingFamilyAddress.size(), address);
                     Set<String> newSet = new HashSet<>();
                     familySets.put(address, newSet);
                 }
@@ -47,8 +50,15 @@ public class ExpeditorsQuestion {
                 familySets.get(address).add(newMember);
             }
         }
+    }
+
+    //using dictionary.
+    public void processProfileOutputFile(String textFileOut, int minAge, int maxAge)
+    {
         createFamilyMapData();
         sortArraysLastFirst();
+        ArrayList<String> res = familyMembersInAgeRange(minAge, maxAge);
+        fileProcessor.writeFile(textFileOut, res);
     }
 
     //All the string manipulation and removal of white spaces.  The array that is returned contains the address in
@@ -70,13 +80,14 @@ public class ExpeditorsQuestion {
         return entryCleaned;
     }
 
-    //Designed to convert the maps of unique members into datasets that are more easily sorted, printed, etc
+    //Designed to convert the maps of unique members into datasets that are more easily sorted, printed, etc.
+    //Updating would require more processing than simply creating a new familyMapToData from the familySets
     private void createFamilyMapData()
     {
 
-        for(int familyID = 0; familyID <  GroupIDMappingFamilyAddress.size(); familyID++)
+        for(int familyID = 0; familyID <  groupIDMappingFamilyAddress.size(); familyID++)
         {
-            String address = GroupIDMappingFamilyAddress.get(familyID);
+            String address = groupIDMappingFamilyAddress.get(familyID);
             ArrayList<String[]> buildFamily = new ArrayList<>();
             Set<String> curFamily = familySets.get(address);
             for(String member : curFamily)
@@ -84,7 +95,7 @@ public class ExpeditorsQuestion {
                 String[] curr = member.split(" ");
                 buildFamily.add(curr);
             }
-            familyMaptoData.put(address, buildFamily);
+            familyMapToData.put(address, buildFamily);
         }
     }
 
@@ -96,8 +107,8 @@ public class ExpeditorsQuestion {
         Comparator<String[]> compAge = (s1, s2) -> Integer.compare(Integer.parseInt(s2[2]), Integer.parseInt(s1[2]));
         Comparator<String[]> compByName = compLastName.thenComparing(compFirstName).thenComparing(compAge);
 
-        for(int count = 0; count < GroupIDMappingFamilyAddress.size(); count++) {
-            ArrayList<String[]> family = familyMaptoData.get(GroupIDMappingFamilyAddress.get(count));
+        for(int count = 0; count < groupIDMappingFamilyAddress.size(); count++) {
+            ArrayList<String[]> family = familyMapToData.get(groupIDMappingFamilyAddress.get(count));
 
             if(family.size() > 1)
             {
@@ -126,9 +137,9 @@ public class ExpeditorsQuestion {
     {
         ArrayList<String> retArrayList = new ArrayList<>();
 
-        for(int count = 0; count < GroupIDMappingFamilyAddress.size(); count++)
+        for(int count = 0; count < groupIDMappingFamilyAddress.size(); count++)
         {
-            ArrayList<String[]> family = familyMaptoData.get(GroupIDMappingFamilyAddress.get(count));
+            ArrayList<String[]> family = familyMapToData.get(groupIDMappingFamilyAddress.get(count));
             String address = "GroupID: " + count + "  Occupant(s): " + String.valueOf(family.size());
             boolean found = false;
             for(String[] member : family)
@@ -141,16 +152,10 @@ public class ExpeditorsQuestion {
                        retArrayList.add(address);
                        found = true;
                     }
-                    retArrayList.add("     " + member[0] + ", " + member[1] + ", " + GroupIDMappingFamilyAddress.get(count) + ", " + member[2]  );
+                    retArrayList.add("     " + member[0] + ", " + member[1] + ", " + groupIDMappingFamilyAddress.get(count) + ", " + member[2]  );
                 }
             }
         }
         return retArrayList;
-    }
-
-    public void writeAgeRangeToFile(int minAge, int maxAge)
-    {
-        ArrayList<String> res = familyMembersInAgeRange(minAge, maxAge);
-        fileProcessor.writeFile(res);
     }
 }

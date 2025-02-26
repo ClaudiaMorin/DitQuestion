@@ -6,18 +6,19 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+/*
+Handles the data file reading and writing
+*/
 public class DataInputOutFile {
 
-    File fileToRead;
-    File fileToWrite;
     public ArrayList<String> data;
-    public DataInputOutFile(String filetoReadString, String fileToWriteString)
-    {
-        fileToRead = new File(filetoReadString);
-        fileToWrite = new File(fileToWriteString);
-    }
+    public DataInputOutFile()
+    {}
 
-    public ArrayList<String> readFile(){
+    //Scans each line of a file and returns the data as an array of strings, will throw an error message to the user
+
+    public ArrayList<String> readFile(String filetoReadString){
+        File fileToRead = new File(filetoReadString);
         data = new ArrayList<String>();
         try {
             Scanner scannerToRead = new Scanner(fileToRead);
@@ -28,13 +29,16 @@ public class DataInputOutFile {
             scannerToRead.close();
         }
         catch(Exception e){
+            System.out.println("Hey, you messed up someplace but you can try again!");
             System.out.println(e.getMessage());
         }
 
         return data;
     }
 
-    public void writeFile(ArrayList<String> dataToWrite){
+    //handles writing the data (ArrayList<String> to a specified file
+    public void writeFile(String fileToWriteString, ArrayList<String> dataToWrite){
+        File fileToWrite = new File(fileToWriteString);
         try {
             fileToWrite.createNewFile();
             PrintStream fs = new PrintStream(fileToWrite);
